@@ -3830,7 +3830,7 @@ div[data-raw-depletion="4"] + .msgHead a.txt_link{
 #overviewcomponent #planet #spaceObjectHeaderActionIcon {
   width: 36px;
   height: 28px;
-  background-image: url(//gf1.geo.gfsrv.net/cdnce/54d37c899703757907c1160db0b1b9.png);
+  background-image: url("https://gf1.geo.gfsrv.net/cdnce/54d37c899703757907c1160db0b1b9.png");
   background-position: center;
   background-repeat: no-repeat;
   background-size: 25px 25px;
@@ -3847,7 +3847,7 @@ div[data-raw-depletion="4"] + .msgHead a.txt_link{
 #overviewcomponent #planet #toggleBuffBar {
   width: 36px;
   height: 28px;
-  background-image: url(//gf1.geo.gfsrv.net/cdnce/54d37c899703757907c1160db0b1b9.png);
+  background-image: url("https://gf1.geo.gfsrv.net/cdnce/54d37c899703757907c1160db0b1b9.png");
   background-position: center;
   background-repeat: no-repeat;
   background-size: 25px 25px;
