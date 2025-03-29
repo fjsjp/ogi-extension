@@ -4386,11 +4386,12 @@ div.ogi-movement .ogi-movement-target .ogi-movement-target-coords span,
 }
 
 .smallplanet .constructionIcon {
-  bottom: 2px !important;
+  bottom: 0px !important;
   left: 72px !important;
   right: unset !important;
   top: auto !important;
   z-index: 10;
+  cursor: pointer;
 }
 
 .smallplanet .constructionIcon.moon {
@@ -4401,6 +4402,75 @@ div.ogi-movement .ogi-movement-target .ogi-movement-target-coords span,
 .moon-construction-sum .smallplanet .constructionIcon.moon {
   left: 194px !important;
   right: unset !important;
+}
+
+/* hide old regular constructionIcons */
+.smallplanet .constructionIcon:not(.constructionIcons .constructionIcon)/*:not(.constructionIcon.moon)*/ {
+  visibility: hidden;
+}
+
+.smallplanet .constructionIcon:not(.moon) {
+  display: inline !important;
+  position: unset !important;
+}
+
+.smallplanet .constructionIcons {
+  transform: translateX(-100%);/*to set position from right border*/
+  position: absolute;
+  bottom: -1px;
+  left: 82px;
+  width: fit-content;
+  visibility: hidden;
+  animation: appearing-planetConstructionIcons 0.2s forwards;
+}
+
+.moon-construction-sum .smallplanet .constructionIcons.moonConstructionIcons {
+  left: unset;
+  right: 65px;
+}
+.smallplanet .constructionIcons.moonConstructionIcons:not(.moon-construction-sum .constructionIcons.moonConstructionIcons) {
+  left: unset;
+  right: 5px;
+}
+@keyframes appearing-planetConstructionIcons {
+  from {
+    visibility: visible;
+    opacity: 0;
+  }
+  to {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+.constructionIconTooltip .techName{
+  display: block;
+}
+
+.constructionIconTooltip .techEndDate{
+  display: block;
+  margin-top:10px;
+}
+
+.smallplanet .icon_wrench_lf {
+  background: url("chrome-extension://__MSG_@@extension_id__/assets/images/icon_wrench_lf.png");
+  background-repeat: no-repeat;
+  display: inline-block;
+  height: 12px;
+  width: 12px;
+}
+.smallplanet .icon_research_lf {
+  background: url("chrome-extension://__MSG_@@extension_id__/assets/images/icon_research_lf.svg");
+  background-size: 10px 10px;
+  
+  filter: brightness(0) saturate(100%) invert(45%) sepia(86%) saturate(5140%) hue-rotate(267deg) brightness(105%) contrast(101%);
+  background-repeat: no-repeat;
+  transform: rotate(45deg);
+  display: inline-block;
+  height: 12px !important;
+  width: 12px !important;
+  background-position: center;
+  background-origin: content-box;
 }
 
 .smallplanet .alert {
