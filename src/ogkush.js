@@ -1506,6 +1506,7 @@ class OGInfinity {
     this.json.ships = this.json.ships || {};
     this.json.allianceClass = this.json.allianceClass || ALLY_CLASS_NONE;
     this.json.productionProgress = this.json.productionProgress || {};
+    this.json.moonProductionProgress = this.json.moonProductionProgress || {};
     this.json.lfProductionProgress = this.json.lfProductionProgress || {};
     this.json.researchProgress = this.json.researchProgress || {};
     this.json.lfResearchProgress = this.json.lfResearchProgress || {};
@@ -1582,7 +1583,7 @@ class OGInfinity {
     this.listenKeyboard();
     this.sideOptions();
     this.minesLevel();
-    this.resourceDetail();
+    this.resourceDetail();    
 
     // refresh right planet list, after ogame resets it when something ends and there is no page reload
     const rightObserver = new OGIObserver();
@@ -13629,6 +13630,73 @@ class OGInfinity {
     });
   }
 
+  prettierOverview() {
+    if (this.page == "overview") {
+      try {
+        // we will need the current oject in the UpdatePlanetOverviewDisplay function
+        const self = this;
+
+        function UpdatePlanetOverviewDisplay(toggle, partName) {
+          const optionName = `overview_display_planet_${partName}`;
+          const attributeName = `${partName}-active`;
+
+          // get the current display status
+          let display = getOption(optionName);
+
+          // if the display is not set, set it to true
+          display = display === undefined || display === null || display === true;
+
+          if(toggle)
+          {
+            //toggle the display
+            planet.setAttribute(attributeName, !display);
+
+            //in this context, 'this' is a dom element, so we need to use self instead
+            //save the display preference
+            setOption(optionName, !display);
+            self.saveData();
+          }
+          else
+          {          
+            planet.setAttribute(attributeName, display);
+          }
+        }
+
+        const planet = document.querySelector('#overviewcomponent #planet');
+        const detailWrapper = planet.querySelector('#detailWrapper');
+
+        // create the toggle planet details button
+        const togglePlanetDataButton = createDOM('div', { class: 'togglePlanetDetails' });
+        togglePlanetDataButton.addEventListener("click", () => {
+          UpdatePlanetOverviewDisplay(true, "details");        
+        });
+
+        // add the toggle planet details button to the header
+        detailWrapper.querySelector('#header_text').appendChild(togglePlanetDataButton);
+
+
+        // create the toggle buff bar button, and add it instead of the spaceObjectHeaderActionIcons
+        const toggleBuffBarButton = createDOM('div', { id: "toggleBuffBar" });
+        toggleBuffBarButton.addEventListener("click", () => {
+          UpdatePlanetOverviewDisplay(true, "buffBar");   
+        });
+        planet.insertBefore(toggleBuffBarButton, detailWrapper);
+
+        const spaceObjectHeaderActionIcons = planet.querySelector('#spaceObjectHeaderActionIcon');
+        planet.removeChild(spaceObjectHeaderActionIcons);
+        
+
+        // init the display of the planet details and buff bar
+        UpdatePlanetOverviewDisplay(false, "details");
+        UpdatePlanetOverviewDisplay(false, "buffBar");
+
+      } catch (error) {
+        // it would be a shame if a UI error would break the game...        
+        console.error("Error in prettierOverview", error);
+      }
+    }
+  }
+
   betterHighscore() {
     if (this.page == "highscore") {
       let addTooltip = () => {
@@ -15266,32 +15334,136 @@ class OGInfinity {
   updateProductionProgress() {
     let now = new Date();
     let needLifeformUpdateForResearch = false;
-    document.querySelectorAll(".planet-koords").forEach((planet) => {
-      let elem = this.json.productionProgress[planet.textContent.trim()];
-      if (elem && new Date(elem.endDate) < now) {
-        if (this.json.options.showProgressIndicators) planet.parentElement.classList.add("finished");
-      } else {
-        if (this.json.options.showProgressIndicators) planet.parentElement.classList.remove("finished");
-      }
-      elem = this.json.lfProductionProgress[planet.textContent.trim()];
-      if (elem && new Date(elem.endDate) < now) {
-        this.json.needLifeformUpdate[planet.parentElement.href.match(/=(\d+)/)[1]] = true;
-        if (this.json.options.showProgressIndicators) planet.parentElement.classList.add("finishedLf");
-      } else {
-        if (this.json.options.showProgressIndicators) planet.parentElement.classList.remove("finishedLf");
-      }
-      elem = this.json.lfResearchProgress[planet.textContent.trim()];
-      if (elem && new Date(elem.endDate) < now) {
-        needLifeformUpdateForResearch = true;
-      }
-    });
+
+    const updateProgressIndicators = () => {
+      document.querySelectorAll(".planet-koords").forEach((planet) => {
+        const smallplanet = planet.parentElement.parentElement;
+        const planetId = planet.parentElement.href.match(/=(\d+)/)[1];
+        const planetCoords = planet.textContent.trim();
+
+        // remove old constructions icons
+        var constructionIconLink = smallplanet.querySelector(".constructionIcon:not(.moon)");
+        if (constructionIconLink) smallplanet.removeChild(constructionIconLink);
+        var moonConstructionIconLink = smallplanet.querySelector(".constructionIcon.moon");
+        if (moonConstructionIconLink) smallplanet.removeChild(moonConstructionIconLink);
+
+        const constructionIconsDiv = DOM.createDOM("div", { class: "constructionIcons" });
+
+        const createConstructionIcon = (elem, planetOrMoonId, techName, iconClass, component) => {
+          const constructionIcon = DOM.createDOM("a", {
+            class: "constructionIcon planet tooltip js_hideTipOnMobile",
+            href: `/game/index.php?page=ingame&component=${component}&cp=${planetOrMoonId}`,
+          });
+
+          const tooltipDiv = DOM.createDOM("div", { class: "constructionIconTooltip" });
+          tooltipDiv.appendChild(DOM.createDOM("span", { class: "techName" }, `${techName} (${elem.tolvl})`));
+
+          constructionIcon.appendChild(DOM.createDOM("span", { class: `icon12px ${iconClass}` }));
+          constructionIcon.addEventListener("mouseover", () =>
+            tooltip(constructionIcon, tooltipDiv, true, { auto: true }, 50, true)
+          );
+
+          return constructionIcon;
+        };
+
+        // check if the moon is in regular construction
+        let elem = this.json.moonProductionProgress[planetCoords];
+        const moon = smallplanet.querySelector(".moonlink");
+        if (elem && moon) {
+          const moonId = moon.href.match(/=(\d+)/)[1];
+          console.log(moonId);
+          if (elem) {
+            const endDate = new Date(elem.endDate);
+            const techName = translate(elem.technoId, "tech");
+
+            const moonConstructionIconsDiv = DOM.createDOM("div", { class: "constructionIcons moonConstructionIcons" });
+            if (endDate > now) {
+              // regular construction work is still in progress, so show the icon
+              moonConstructionIconsDiv.appendChild(
+                createConstructionIcon(elem, moonId, techName, "icon_wrench", "facilities")
+              );
+
+              smallplanet.appendChild(moonConstructionIconsDiv);
+            }
+          }
+        }
+
+        // check if the planet is in lifeform research
+        elem = this.json.lfResearchProgress[planetCoords];
+        if (elem) {
+          const endDate = new Date(elem.endDate);
+          if (endDate < now) {
+            // lifeform research work is finished, so we need to update the lifeform
+            needLifeformUpdateForResearch = true;
+          } else if (endDate > now) {
+            // lifeform research work is in progress, so show the icon
+            const techName = translate(elem.technoId, "lifeformTech");
+            constructionIconsDiv.appendChild(
+              createConstructionIcon(elem, planetId, techName, "icon_research_lf", "lfresearch")
+            );
+          }
+        }
+
+        // check if the planet is in lifeform construction
+        elem = this.json.lfProductionProgress[planetCoords];
+        if (elem) {
+          const endDate = new Date(elem.endDate);
+          const techName = translate(elem.technoId, "lifeformTech");
+
+          if (endDate < now) {
+            // lifeform construction work is finished
+            this.json.needLifeformUpdate[planet.parentElement.href.match(/=(\d+)/)[1]] = true;
+            if (this.json.options.showProgressIndicators) {
+              // regular construction work is finished, so show border color
+              planet.parentElement.classList.add("finishedLf");
+            }
+          } else {
+            // if some lifeform construction work is finished, remove the border color
+            if (this.json.options.showProgressIndicators) planet.parentElement.classList.remove("finishedLf");
+
+            if (endDate > now) {
+              // lifeform construction work is still in progress, so show the icon
+              constructionIconsDiv.appendChild(
+                createConstructionIcon(elem, planetId, techName, "icon_wrench_lf", "lfbuildings")
+              );
+            }
+          }
+        }
+
+        // check if the planet is in regular construction
+        elem = this.json.productionProgress[planetCoords];
+        if (elem) {
+          const endDate = new Date(elem.endDate);
+          const techName = translate(elem.technoId, "tech");
+          if (endDate < now) {
+            // regular construction work is finished, so show border color
+            if (this.json.options.showProgressIndicators) planet.parentElement.classList.add("finished");
+          } else {
+            // if some regular construction work is finished, remove the border color
+            if (this.json.options.showProgressIndicators) planet.parentElement.classList.remove("finished");
+
+            if (endDate > now) {
+              // lifeform construction work is still in progress, so show the icon
+              constructionIconsDiv.appendChild(
+                //TODO: find a way to get the correct component (facilities or supplies) instead of overview
+                createConstructionIcon(elem, planetId, techName, "icon_wrench", "overview")
+              );
+            }
+          }
+        }
+
+        //add the construction icons to the planet
+        smallplanet.appendChild(constructionIconsDiv);
+      });
+    };
+
     if (needLifeformUpdateForResearch) {
       document.querySelectorAll(".planet-koords").forEach((planet) => {
         this.json.needLifeformUpdate[planet.parentElement.href.match(/=(\d+)/)[1]] = true;
       });
     }
 
-    if (document.querySelector("#productionboxbuildingcomponent") && !this.current.isMoon) {
+    if (document.querySelector("#productionboxbuildingcomponent")) {
       let coords = this.current.coords;
       let building = document.querySelector("#productionboxbuildingcomponent .queuePic");
       if (building) {
@@ -15313,15 +15485,26 @@ class OGInfinity {
           time[1],
           time[2]
         );
-        this.json.productionProgress[coords] = {
+        const elem = {
           technoId: technoId,
           tolvl: tolvl,
           endDate: endDate.toGMTString(),
         };
+
+        if (this.current.isMoon) {
+          this.json.moonProductionProgress[coords] = elem;
+        } else {
+          this.json.productionProgress[coords] = elem;
+        }
       } else {
-        delete this.json.productionProgress[coords];
+        if (this.current.isMoon) {
+          delete this.json.moonProductionProgress[coords];
+        } else {
+          delete this.json.productionProgress[coords];
+        }
       }
     }
+
     if (document.querySelector("#productionboxlfbuildingcomponent") && !this.current.isMoon) {
       let coords = this.current.coords;
       let lfbuilding = document.querySelector("#productionboxlfbuildingcomponent .queuePic");
@@ -15417,6 +15600,9 @@ class OGInfinity {
         delete this.json.lfResearchProgress[coords];
       }
     }
+
+    updateProgressIndicators();
+
     this.saveData();
   }
 
