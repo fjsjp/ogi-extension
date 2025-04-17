@@ -30,6 +30,7 @@ import * as loadingUtil from "./util/loading.js";
 import * as standardUnit from "./util/standardUnit.js";
 import planetType from "./util/enum/planetType.js";
 import shipEnum from "./util/enum/ship.js";
+import OverviewPage from "./ctxpage/overview/OverviewPage.js";
 
 const DISCORD_INVITATION_URL = "https://discord.gg/8Y4SWup";
 //const VERSION = "__VERSION__";
@@ -1360,6 +1361,8 @@ const isOwnPlanet = (coords) => {
 };
 
 class OGInfinity {
+  OverviewPage = new OverviewPage();
+
   constructor() {
     this.commander = document.querySelector("#officers > a.commander.on") !== null;
     this.rawURL = new URL(window.location.href);
@@ -1646,7 +1649,7 @@ class OGInfinity {
     this.utilities();
     this.chat();
     this.uvlinks();
-    this.prettierOverview();
+    this.OverviewPage.MakePrettierOverview(this.page);
     this.betterHighscore();    
     this.overviewDates();
     needsUtil.display();
@@ -3741,7 +3744,7 @@ class OGInfinity {
         let id =
           (playerDiv && playerDiv.getAttribute("rel") && playerDiv.getAttribute("rel").replace("player", "")) || 99999;
         let coords = galaxy + ":" + system + ":" + Number(index + 1);
-        let colors = createDOM("div", { class: "ogl-colors", "data-coords": coords, "data-context": "galaxy" });
+        const colors = DOM.createDOM("div", { class: "ogl-colors", "data-coords": coords, "data-context": "galaxy" });
         //console.log('Coord: ' + coords + ' parent:' + colors + ' Id:' + id + ' Moon:' + moon);
         element.insertBefore(colors, element.firstChild);
         this.addMarkerUI(coords, colors, id, moon);
@@ -3753,9 +3756,8 @@ class OGInfinity {
 
       let coords = galaxy + ":" + system + ":" + Number(index + 1);
       let playerDiv = element.querySelector(".cellPlayerName > span.tooltipRel");
-      let playerId = playerDiv && playerDiv.getAttribute("rel") ? playerDiv.getAttribute("rel").replace("player", "") : null;
+      const playerId = playerDiv?.getAttribute("rel")?.replace("player", "");
       if (this.json.markers[coords]) {
-        //console.log('JSONID:' + this.json.markers[coords].id + ' Id:' + playerId);
         if (!playerId || this.json.markers[coords].id != playerId) {
           delete this.json.markers[coords];
           this.markedPlayers = this.getMarkedPlayers(this.json.markers);
@@ -3771,16 +3773,15 @@ class OGInfinity {
           this.json.markers[coords].moon = element.querySelector(".cellMoon .tooltipRel") ? true : false;
         }
         this.saveData();
-      }
-      else if(this.json.playerMarkers  && this.json.playerMarkers[playerId]){
-        //there is no marker fore these coord but there is a marker for this player
+      } else if (this.json.playerMarkers && this.json.playerMarkers[playerId]) {
+        //there is no marker for these coord but there is a marker for this player
 
         //Auto add marker
         this.json.markers[coords] = {
           color: this.json.playerMarkers[playerId].color,
-          id: playerId
+          id: playerId,
         };
-        
+
         //Save data
         this.saveData();
 
@@ -13709,42 +13710,45 @@ class OGInfinity {
               let count = countDiv.getAttribute("title") || countDiv.getAttribute("data-tooltip-title");
               count = count.split(":")[1].trim();
               countDiv.replaceChildren(
-                createDOM("span", { class: "ogi-highscore-ships" }, `(${count})`),
+                DOM.createDOM("span", { class: "ogi-highscore-ships" }, `(${count})`),
                 document.createTextNode(` ${countDiv.textContent.trim()}`)
               );
             }
 
-            if(playerDiv) {
+            if (playerDiv) {
               //Reset player marker
               position.classList.remove("ogl-marked");
               position.removeAttribute("data-marked");
-            
-              const playerId = position.getAttribute("id").match(/[0-9]+$/)[0];
+
+              const highscorePlayerId = position.getAttribute("id").match(/[0-9]+$/)[0];
+
+              // exclude own player
+              if (highscorePlayerId == playerId) return;
 
               /*get score cell and add marker ui*/
               const tdScore = position.querySelector(".score");
-              let colors = createDOM("div", { class: "ogi-highscore-flag ogl-colors", "data-context": "players-highscore" });
-              const spanScore = createDOM("span", { class:"ogi-highscore-score" }, tdScore.innerText);
+              const colors = DOM.createDOM("div", {
+                class: "ogi-highscore-flag ogl-colors",
+                "data-context": "players-highscore",
+              });
+              const spanScore = DOM.createDOM("span", { class: "ogi-highscore-score" }, tdScore.textContent);
               tdScore.replaceChildren(colors, spanScore);
-              this.addPlayerMarkerUI(colors, playerId);
+              this.addPlayerMarkerUI(colors, highscorePlayerId);
 
               // Update UI with player marker
-              if (this.json.playerMarkers[playerId]) {
-                  position.classList.add("ogl-marked");
-                  position.setAttribute("data-marked", this.json.playerMarkers[playerId].color);
-              }            
-
-              const mail = position.querySelector(".sendmsg_content > a");
-              if (mail) {
-                dataHelper.getPlayer(playerId).then((p) => {
-                  let statusClass = this.getPlayerStatus(p.status);
-                  if (playerDiv.getAttribute("class").includes("status_abbr_honorableTarget")) {
-                    statusClass = "status_abbr_honorableTarget";
-                  }
-                  playerDiv.replaceChildren(createDOM("span", { class: `${statusClass}` }, `${p.name}`));
-                  this.stalk(playerDiv, p);
-                });
+              if (this.json.playerMarkers[highscorePlayerId]) {
+                position.classList.add("ogl-marked");
+                position.setAttribute("data-marked", this.json.playerMarkers[highscorePlayerId].color);
               }
+
+              dataHelper.getPlayer(highscorePlayerId).then((p) => {
+                let statusClass = this.getPlayerStatus(p.status);
+                if (playerDiv.getAttribute("class").includes("status_abbr_honorableTarget")) {
+                  statusClass = "status_abbr_honorableTarget";
+                }
+                playerDiv.replaceChildren(DOM.createDOM("span", { class: `${statusClass}` }, `${p.name}`));
+                this.stalk(playerDiv, p);
+              });
             }
           }
         });

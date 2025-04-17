@@ -8,11 +8,12 @@ const colors = ["red", "orange", "yellow", "green", "blue", "violet", "gray", "b
 
 function addPlayer(parent, playerId) {
   const div = createDOM("div", { class: "ogl-colorChoice" });
-  let playerMarkers = OGIData.playerMarkers;
+  const playerMarkers = OGIData.playerMarkers;
 
   colors.forEach((color) => {
     const circle = div.appendChild(createDOM("div", { "data-marker": color }));
     div.appendChild(circle);
+
     if (playerMarkers[playerId] && playerMarkers[playerId].color === color) {
       circle.classList.add("ogl-active");
     }
@@ -20,9 +21,7 @@ function addPlayer(parent, playerId) {
     circle.addEventListener("click", () => {
       div.querySelectorAll("div[data-marker]").forEach((e) => e.classList.remove("ogl-active"));
       Player.get(playerId).then((player) => {
-        
         if (playerMarkers[playerId] && playerMarkers[playerId].color === color) {
-
           // Remove marker for player
           delete playerMarkers[playerId];
 
@@ -32,7 +31,7 @@ function addPlayer(parent, playerId) {
             coordsMarkers[planet.coords] = coordsMarkers[planet.coords] || {};
 
             // if marker is set at these coords and is the same color and player
-            if(coordsMarkers[planet.coords].color === color && coordsMarkers[planet.coords].id === playerId) {
+            if (coordsMarkers[planet.coords].color === color && coordsMarkers[planet.coords].id === playerId) {
               delete coordsMarkers[planet.coords];
             }
           });
@@ -46,7 +45,7 @@ function addPlayer(parent, playerId) {
           // Add marker for player
           playerMarkers[playerId] = playerMarkers[playerId] || {};
           playerMarkers[playerId].color = color;
-                  
+
           /// Set markers for each planet
           const coordsMarkers = OGIData.markers;
           player.planets.forEach((planet) => {
@@ -85,7 +84,7 @@ function addPlayer(parent, playerId) {
 function displayPlayer(parent, id) {
   const element = parent.closest("tr");
 
-  let playerMarkers = OGIData.playerMarkers;
+  const playerMarkers = OGIData.playerMarkers;
   if (playerMarkers[id]) {
     element.classList.add("ogl-marked");
     element.setAttribute("data-marked", playerMarkers[id].color);
@@ -94,7 +93,6 @@ function displayPlayer(parent, id) {
     element.removeAttribute("data-marked");
   }
 }
-
 
 function add(coords, parent, id) {
   const div = createDOM("div", { class: "ogl-colorChoice" });
@@ -161,6 +159,7 @@ function display(parent, coords) {
 }
 
 export default {
-  add, addPlayer,
+  add,
+  addPlayer,
   display,
 };
