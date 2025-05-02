@@ -1,5 +1,6 @@
 import OgamePageData from "./OgamePageData.js";
 import OGIData from "./OGIData.js";
+import { getLogger } from "./logger.js";
 
 const translation = Object.freeze({
   tech: {
@@ -2971,6 +2972,46 @@ const translation = Object.freeze({
       br: "Anexar relatórios de espionagem ao mudar de página",
     },
     183: {
+      de: "feindliche Flotten",
+      en: "hostile fleets",
+      es: "flotas hostiles",
+      fr: "flottes hostiles",
+      tr: "düşman filoları",
+      br: "frotas hostis",
+    },
+    184: {
+      de: "Standardmäßig",
+      en: "Default",
+      es: "Por defecto",
+      fr: "Par défaut",
+      tr: "Varsayılan olarak",
+      br: "Por padrão",
+    },
+    185: {
+      de: "Gepulstes Symbol",
+      en: "Pulsed icon",
+      es: "Icono pulsado",
+      fr: "Icone animé",
+      tr: "Darbeli simge",
+      br: "Ícone pulsado",
+    },
+    186: {
+      de: "Gepulster Hintergrund",
+      en: "Pulsed background",
+      es: "Fondo pulsado",
+      fr: "Arrière plan animé",
+      tr: "Darbeli arka plan",
+      br: "Fundo pulsado",
+    },
+    187: {
+      de: "Alarmmodus für feindliche Flotten",
+      en: "Hostile Fleet Alert Mode",
+      es: "Modo de alerta de flota hostil",
+      fr: "Mode d'alerte de flotte hostile",
+      tr: "Düşman Filosu Uyarı Modu",
+      br: "Modo de alerta de frota hostil",
+    },
+    188: {
       de: undefined,
       en: undefined,
       es: undefined,
@@ -2986,14 +3027,16 @@ let currentLanguage = ["ar", "mx"].includes(language) ? "es" : language;
 currentLanguage = ["de", "en", "es", "fr", "tr", "br"].includes(currentLanguage) ? currentLanguage : "en";
 
 class Translator {
+  logger = getLogger("Translator");
+
   #getTranslations() {
-    return (
-      OGIData.json.translations ?? {
-        lfTypeNames: {},
-        tech: {},
-        text: {},
-      }
-    );
+    const translations = OGIData.json.translations ?? {};
+    if (!translations.lfTypeNames) translations.lfTypeNames = {};
+    if (!translations.tech) translations.tech = {};
+    if (!translations.language) translations.language = {};
+    if (!translations.lastUpdate) translations.lastUpdate = new Date(0);
+
+    return translations;
   }
   #translate(id, type = "text") {
     return translation?.[type]?.[id]?.[currentLanguage] || translation?.[type]?.[id]?.en || "";
@@ -3012,8 +3055,7 @@ class Translator {
     return translations.lfTypeNames[name];
   }
 
-  UpdateAllTechNamesFromEmpire(empire) {
-    var translations = this.#getTranslations();
+  #ForceUpdateAllTechNamesFromEmpire(translations, empire) {
     const regex = /^\d+$/;
     Object.keys(empire.translations.planets).forEach((key) => {
       if (!key.endsWith("_full")) {
@@ -3024,12 +3066,37 @@ class Translator {
         }
       }
     });
-    OGIData.json.translations = translations;
+  }
+
+  UpdateAllTechNamesFromEmpire(empireFromPlanets, empireFromMoons) {
+    var translations = this.#getTranslations();
+    const diffInMinutes = Math.floor((new Date() - new Date(translations.lastUpdate)) / (1000 * 60));
+
+    //if langage is different from currentLanguage or if date is older than 60 minutes update
+    if (translations.language !== currentLanguage || diffInMinutes > 60) {
+      this.logger.debug(`Translations (${currentLanguage}) will be updated`);
+
+      this.#ForceUpdateAllTechNamesFromEmpire(translations, empireFromPlanets);
+      this.#ForceUpdateAllTechNamesFromEmpire(translations, empireFromMoons);
+
+      //set date to now and language to currentLanguage
+      translations.lastUpdate = new Date().toISOString();
+      translations.language = currentLanguage;
+
+      OGIData.json.translations = translations;
+
+      this.logger.debug(`Translations (${currentLanguage}) updated`);
+    } else {
+      this.logger.debug(
+        `No need to update translations (${currentLanguage}), last update was ${diffInMinutes} minutes ago`
+      );
+    }
   }
 
   InitializeLFNames(hasLifeforms) {
     if (!hasLifeforms) return;
     var translations = this.#getTranslations();
+
     fetch(`/game/index.php?page=ingame&component=lfsettings`)
       .then((rep) => rep.text())
       .then((str) => {
