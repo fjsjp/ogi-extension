@@ -1434,7 +1434,7 @@ class OGInfinity {
     this.loading();
     this.updateServerSettings(true);
     this.getAllianceClass();
-    Translator.InitializeLFNames(this.hasLifeforms);
+    Translator.InitializeLFNames(this.current, this.hasLifeforms);
     await this.updateEmpireData(true);
     await this.updateLifeform();
     document.querySelector(".ogl-dialogOverlay").classList.remove("ogl-active");
@@ -1681,7 +1681,7 @@ class OGInfinity {
             this.loading();
             this.updateServerSettings(true);
             this.getAllianceClass();
-            Translator.InitializeLFNames(this.hasLifeforms);
+            Translator.InitializeLFNames(this.current, this.hasLifeforms);
             await this.updateLifeform();
             this.welcome();
           });
@@ -11338,7 +11338,7 @@ class OGInfinity {
           lifeformLevel[lifeform] = level;
         });
 
-        const parseBonus = (text) => (text ? fromFormatedNumber(text.split("%")[0], false, true) / 100 || 0 : 0);
+        const parseBonus = (text) => fromFormatedNumber(text.split("%")[0], false, true) / 100 || 0;
 
         // production bonus
         const metalDiv = htmlDocument.querySelector(
@@ -14711,61 +14711,6 @@ class OGInfinity {
     const INCOMING_HOSTILE_FLEETS_PER_PLANETS = {};
     const eventTable = document.getElementById("eventContent");
 
-    /*
-    // Simulate hostile fleets method
-
-    const simulateHostileFleet = (coords, type) => {
-      const testElementAttack = DOM.createDOM("tr", {
-        class: "allianceAttack unionunion2034 detailsClosed",
-        "data-mission-type": "1",
-        "data-return-flight": "false",
-        "data-arrival-time": "1845844183",
-      });
-      testElementAttack.appendChild(DOM.createDOM("td", { class: "countDown" }));
-      testElementAttack.appendChild(DOM.createDOM("td", { class: "arrivalTime" }, "14:43:03"));
-      testElementAttack.appendChild(DOM.createDOM("td", { class: "missionFleet" }));
-      testElementAttack.appendChild(DOM.createDOM("td", { class: "originFleet" }, "Participants"));
-      testElementAttack.appendChild(DOM.createDOM("td", { class: "coordsOrigin textBeefy" }, "1 / 5"));
-      testElementAttack.appendChild(DOM.createDOM("td", { class: "detailsFleet" }, "1"));
-      testElementAttack.appendChild(DOM.createDOM("td", { class: "icon_movement" }));
-      const testDestFleet = DOM.createDOM("td", { class: "destFleet" });
-
-      //testDestFleet.appendChild(DOM.createDOM("span", {}, `TEST ${type}`));
-      testDestFleet.appendChild(DOM.createDOM("figure", { class: `planetIcon ${type} tooltip js_hideTipOnMobile` }));
-      testDestFleet.append(`TEST ${type}`);
-      testElementAttack.appendChild(testDestFleet);
-
-      const testDestCoords = DOM.createDOM("td", { class: "destCoords" });
-      testDestCoords.appendChild(DOM.createDOM("a", { href: "#" }, coords));
-      testElementAttack.appendChild(testDestCoords);
-      testElementAttack.appendChild(DOM.createDOM("td", { colspan: "2" }));
-      return testElementAttack;
-    };
-
-    // Simulate hostile fleets
-    document
-      .getElementById("eventContent")
-      .querySelector("tbody")
-      .appendChild(simulateHostileFleet("[3:326:8]", "planet"));
-    document
-      .getElementById("eventContent")
-      .querySelector("tbody")
-      .appendChild(simulateHostileFleet("[4:136:8]", "moon"));
-    document
-      .getElementById("eventContent")
-      .querySelector("tbody")
-      .appendChild(simulateHostileFleet("[4:136:8]", "moon"));
-
-    document
-      .getElementById("eventContent")
-      .querySelector("tbody")
-      .appendChild(simulateHostileFleet("[4:385:8]", "moon"));
-    document
-      .getElementById("eventContent")
-      .querySelector("tbody")
-      .appendChild(simulateHostileFleet("[4:385:8]", "planet"));
-      */
-
     const ACSrows = eventTable.querySelectorAll("tr.allianceAttack");
     const unionTable = [];
     ACSrows.forEach((acsRow) => {
@@ -14783,7 +14728,6 @@ class OGInfinity {
       const destFleetCell = row.querySelector(".destFleet");
 
       const destCoords = destCoordCell.textContent.replace("[", "").replace("]", "").trim();
-      const isReturnFlight = row.getAttribute("data-return-flight")?.toLowerCase() === "true";
       const date = new Date();
       const timestamp = row.getAttribute("data-arrival-time");
 
@@ -14794,7 +14738,12 @@ class OGInfinity {
         isDestMoon: !!destFleetCell.querySelector(".moon"),
       };
 
-      if (row.classList.contains("eventFleet")) {
+      const hostileCountDown = row.querySelector(".countDown .hostile");
+      if (hostileCountDown && hostileCountDown.textContent.trim() !== "---") {
+        //Hostile fleet
+        if (!INCOMING_HOSTILE_FLEETS_PER_PLANETS[destCoords]) INCOMING_HOSTILE_FLEETS_PER_PLANETS[destCoords] = [];
+        INCOMING_HOSTILE_FLEETS_PER_PLANETS[destCoords].push(flying);
+      } else if (row.classList.contains("eventFleet")) {
         flying.missionFleetIcon = cols[2].querySelector("img").src;
 
         // Get the mission title by removing the suffix "own fleet" and the "return" suffix (eg: "(R)")
@@ -14833,19 +14782,6 @@ class OGInfinity {
           };
         }
         FLYING_PER_PLANETS[flying.originCoords][flying.missionFleetTitle].data.push(flying);
-      } else if (
-        [
-          missionType.MOON_DESTRUCTION,
-          missionType.ATTACK,
-          missionType.MISSILE_ATTACK,
-          missionType.ACS_ATTACK,
-          missionType.SPY,
-        ].includes(parseInt(fleetMissionType)) &&
-        !isReturnFlight
-      ) {
-        //Hostile fleet
-        if (!INCOMING_HOSTILE_FLEETS_PER_PLANETS[destCoords]) INCOMING_HOSTILE_FLEETS_PER_PLANETS[destCoords] = [];
-        INCOMING_HOSTILE_FLEETS_PER_PLANETS[destCoords].push(flying);
       }
     });
 
@@ -14865,7 +14801,7 @@ class OGInfinity {
       const createAlertIcon = (type, planetOrMoonId, fleetCount) => {
         //create the tooltip
         const tooltipDiv = DOM.createDOM("div");
-        tooltipDiv.appendChild(DOM.createDOM("span", {}, `${fleetCount} ${this.getTranslatedText(183)}`));
+        tooltipDiv.appendChild(DOM.createDOM("span", {}, `${this.getTranslatedText(183)}: ${fleetCount}`));
 
         const alert = DOM.createDOM("a", {
           href: `/game/index.php?page=ingame&component=fleetdispatch&cp=${planetOrMoonId}`,
@@ -15553,7 +15489,7 @@ class OGInfinity {
             needLifeformUpdateForResearch = true;
           } else if (endDate > now) {
             // lifeform research work is in progress, so show the icon
-            const techName = Translator.translate(elem.technoId, "lifeformTech");
+            const techName = Translator.translate(elem.technoId, "tech");
             constructionIconsDiv.appendChild(
               createConstructionIcon(elem, planetId, techName, "icon_research_lf", "lfresearch")
             );
@@ -15564,7 +15500,7 @@ class OGInfinity {
         elem = this.json.lfProductionProgress[planetCoords];
         if (elem) {
           const endDate = new Date(elem.endDate);
-          const techName = Translator.translate(elem.technoId, "lifeformTech");
+          const techName = Translator.translate(elem.technoId, "tech");
 
           if (endDate < now) {
             // lifeform construction work is finished
@@ -15607,18 +15543,6 @@ class OGInfinity {
             }
           }
         }
-        /*
-        // for tests only
-        constructionIconsDiv.appendChild(
-          createConstructionIcon({ tolvl: 10 }, planetId, "?", "icon_research_lf", "lfresearch")
-        );
-        constructionIconsDiv.appendChild(
-          createConstructionIcon({ tolvl: 10 }, planetId, "?", "icon_wrench", "lfresearch")
-        );
-        constructionIconsDiv.appendChild(
-          createConstructionIcon({ tolvl: 10 }, planetId, "?", "icon_wrench_lf", "lfresearch")
-        );
-*/
 
         //add the construction icons to the planet
         smallplanet.appendChild(constructionIconsDiv);
