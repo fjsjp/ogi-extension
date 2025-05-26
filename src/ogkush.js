@@ -10664,7 +10664,7 @@ class OGInfinity {
         onResChange(2);
         onResChange(1);
         onResChange(0);
-        this.selectBestCargoShip();
+        this.selectBestCargoShip(this.json.options.collect.ship);
       }
       update(false);
     }
@@ -11473,7 +11473,6 @@ class OGInfinity {
   async getEmpireInfo() {
     const empire = await EmpirePage.GetEmpireAsync();
     Translator.UpdateAllTechNamesFromEmpire(empire.translations);
-
     return empire.planets;
   }
 
@@ -15395,9 +15394,9 @@ class OGInfinity {
         const planetId = planet.parentElement.href.match(/=(\d+)/)[1];
         const planetCoords = planet.textContent.trim();
         // remove old constructions icons
-        var constructionIconLink = smallplanet.querySelector(".constructionIcon:not(.moon)");
+        const constructionIconLink = smallplanet.querySelector(".constructionIcon:not(.moon)");
         if (constructionIconLink) smallplanet.removeChild(constructionIconLink);
-        var moonConstructionIconLink = smallplanet.querySelector(".constructionIcon.moon");
+        const moonConstructionIconLink = smallplanet.querySelector(".constructionIcon.moon");
         if (moonConstructionIconLink) smallplanet.removeChild(moonConstructionIconLink);
 
         const constructionIconsDiv = DOM.createDOM("div", { class: "constructionIcons" });
@@ -16016,7 +16015,7 @@ class OGInfinity {
     }
   }
 
-  selectBestCargoShip(preveredShipId = null) {
+  selectBestCargoShip(preferredShipId = null) {
     if (fleetDispatcher.currentPage == "fleet1" && fleetDispatcher.shipsOnPlanet.length != 0) {
       let metalAvailable = Math.max(0, fleetDispatcher.metalOnPlanet);
       let crystalAvailable = Math.max(0, fleetDispatcher.crystalOnPlanet);
@@ -16035,8 +16034,8 @@ class OGInfinity {
         Math.min(metal, metalAvailable) + Math.min(crystal, crystalAvailable) + Math.min(deut, deutAvailable);
       let cargoShipsOnPlanet = {};
       let cargoIds = [];
-      if (preveredShipId) cargoIds.push(preveredShipId);
-      [202, 203, 219, 209].forEach((id) => {
+      if (preferredShipId) cargoIds.push(preferredShipId);
+      [202, 203, 219].forEach((id) => {
         if (!cargoIds.includes(id)) cargoIds.push(id);
       });
       if (this.json.ships[210].cargoCapacity != 0 && !cargoIds.includes(210)) cargoIds.push(210);
