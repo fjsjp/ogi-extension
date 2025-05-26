@@ -2092,20 +2092,20 @@ class Translator {
     return translations.lfTypeNames[name];
   }
 
-  #ForceUpdateAllTechNamesFromEmpire(translations, empire) {
+  #ForceUpdateAllTechNamesFromEmpire(translations, translationsFromEmpire) {
     const regex = /^\d+$/;
-    Object.keys(empire.translations.planets).forEach((key) => {
+    Object.keys(translationsFromEmpire).forEach((key) => {
       if (!key.endsWith("_full")) {
         if (regex.test(key)) {
-          translations.tech[key] = empire.translations.planets[`${key}_full`].trim();
+          translations.tech[key] = translationsFromEmpire[`${key}_full`].trim();
         } else {
-          translations.text[key] = empire.translations.planets[key].trim();
+          translations.text[key] = translationsFromEmpire[key].trim();
         }
       }
     });
   }
 
-  UpdateAllTechNamesFromEmpire(empireFromPlanets, empireFromMoons) {
+  UpdateAllTechNamesFromEmpire(translationsFromEmpire) {
     const translations = this.#getTranslations();
     const diffInMinutes = Math.floor((new Date() - new Date(translations.lastUpdate)) / (1000 * 60));
 
@@ -2113,8 +2113,7 @@ class Translator {
     if (translations.language !== currentLanguage || diffInMinutes > 60) {
       this.logger.debug(`Translations (${currentLanguage}) will be updated`);
 
-      this.#ForceUpdateAllTechNamesFromEmpire(translations, empireFromPlanets);
-      this.#ForceUpdateAllTechNamesFromEmpire(translations, empireFromMoons);
+      this.#ForceUpdateAllTechNamesFromEmpire(translations, translationsFromEmpire);
 
       //set date to now and language to currentLanguage
       translations.lastUpdate = new Date().toISOString();

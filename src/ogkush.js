@@ -31,6 +31,7 @@ import * as standardUnit from "./util/standardUnit.js";
 import planetType from "./util/enum/planetType.js";
 import shipEnum from "./util/enum/ship.js";
 import OverviewPage from "./ctxpage/overview/OverviewPage.js";
+import EmpirePage from "./ctxpage/empire/EmpirePage.js";
 
 const DISCORD_INVITATION_URL = "https://discord.gg/8Y4SWup";
 //const VERSION = "__VERSION__";
@@ -1362,6 +1363,7 @@ const isOwnPlanet = (coords) => {
 
 class OGInfinity {
   OverviewPage = new OverviewPage();
+  EmpirePage = new EmpirePage();
 
   constructor() {
     this.commander = document.querySelector("#officers > a.commander.on") !== null;
@@ -1582,7 +1584,7 @@ class OGInfinity {
     this.listenKeyboard();
     this.sideOptions();
     this.minesLevel();
-    this.resourceDetail();    
+    this.resourceDetail();
 
     // refresh right planet list, after ogame resets it when something ends and there is no page reload
     const rightObserver = new OGIObserver();
@@ -1651,7 +1653,7 @@ class OGInfinity {
     this.chat();
     this.uvlinks();
     this.OverviewPage.MakePrettierOverview(this.page);
-    this.betterHighscore();    
+    this.betterHighscore();
     this.overviewDates();
     needsUtil.display();
     this.jumpGate();
@@ -11470,45 +11472,10 @@ class OGInfinity {
   }
 
   async getEmpireInfo() {
-    const abortController = new AbortController();
-    window.onbeforeunload = () => abortController.abort();
+    const empire = await this.EmpirePage.GetEmpireAsync();
+    Translator.UpdateAllTechNamesFromEmpire(empire.translations);
 
-    const empireRequest = (href) =>
-      fetch(`?${href.toString()}`, { signal: abortController.signal })
-        .then((response) => response.text())
-        .then((string) =>
-          JSON.parse(
-            string.substring(string.indexOf("createImperiumHtml") + 47, string.indexOf("initEmpire") - 16),
-            (key, value) => {
-              if (key.includes("html") && key !== "equipment_html") return;
-              if (value === "0") return 0;
-              return value;
-            }
-          )
-        );
-
-    var empireObjectPlanets = await empireRequest(new URLSearchParams({ page: "standalone", component: "empire" }));
-    var empireObjectMoons = await empireRequest(
-      new URLSearchParams({ page: "standalone", component: "empire", planetType: "1" })
-    );
-
-    Translator.UpdateAllTechNamesFromEmpire(empireObjectPlanets, empireObjectMoons);
-
-    const planets = empireObjectPlanets.planets;
-    const moons = empireObjectMoons.planets;
-
-    empireObjectPlanets.planets.forEach((planet) => {
-      planet.invalidate = false;
-      if (moons) {
-        moons.forEach((moon) => {
-          if (planet.moonID === moon.id) {
-            planet.moon = moon;
-            planet.moon.invalidate = false;
-          }
-        });
-      }
-    });
-    return empireObjectPlanets.planets;
+    return empire.planets;
   }
 
   updateEmpireProduction() {
@@ -13649,8 +13616,7 @@ class OGInfinity {
           // if the display is not set, set it to true
           display = display === undefined || display === null || display === true;
 
-          if(toggle)
-          {
+          if (toggle) {
             //toggle the display
             planet.setAttribute(attributeName, !display);
 
@@ -13658,43 +13624,38 @@ class OGInfinity {
             //save the display preference
             setOption(optionName, !display);
             self.saveData();
-          }
-          else
-          {          
+          } else {
             planet.setAttribute(attributeName, display);
           }
         }
 
-        const planet = document.querySelector('#overviewcomponent #planet');
-        const detailWrapper = planet.querySelector('#detailWrapper');
+        const planet = document.querySelector("#overviewcomponent #planet");
+        const detailWrapper = planet.querySelector("#detailWrapper");
 
         // create the toggle planet details button
-        const togglePlanetDataButton = createDOM('div', { class: 'togglePlanetDetails' });
+        const togglePlanetDataButton = createDOM("div", { class: "togglePlanetDetails" });
         togglePlanetDataButton.addEventListener("click", () => {
-          UpdatePlanetOverviewDisplay(true, "details");        
+          UpdatePlanetOverviewDisplay(true, "details");
         });
 
         // add the toggle planet details button to the header
-        detailWrapper.querySelector('#header_text').appendChild(togglePlanetDataButton);
-
+        detailWrapper.querySelector("#header_text").appendChild(togglePlanetDataButton);
 
         // create the toggle buff bar button, and add it instead of the spaceObjectHeaderActionIcons
-        const toggleBuffBarButton = createDOM('div', { id: "toggleBuffBar" });
+        const toggleBuffBarButton = createDOM("div", { id: "toggleBuffBar" });
         toggleBuffBarButton.addEventListener("click", () => {
-          UpdatePlanetOverviewDisplay(true, "buffBar");   
+          UpdatePlanetOverviewDisplay(true, "buffBar");
         });
         planet.insertBefore(toggleBuffBarButton, detailWrapper);
 
-        const spaceObjectHeaderActionIcons = planet.querySelector('#spaceObjectHeaderActionIcon');
+        const spaceObjectHeaderActionIcons = planet.querySelector("#spaceObjectHeaderActionIcon");
         planet.removeChild(spaceObjectHeaderActionIcons);
-        
 
         // init the display of the planet details and buff bar
         UpdatePlanetOverviewDisplay(false, "details");
         UpdatePlanetOverviewDisplay(false, "buffBar");
-
       } catch (error) {
-        // it would be a shame if a UI error would break the game...        
+        // it would be a shame if a UI error would break the game...
         console.error("Error in prettierOverview", error);
       }
     }
