@@ -1363,7 +1363,6 @@ const isOwnPlanet = (coords) => {
 
 class OGInfinity {
   OverviewPage = new OverviewPage();
-  EmpirePage = new EmpirePage();
 
   constructor() {
     this.commander = document.querySelector("#officers > a.commander.on") !== null;
@@ -11472,7 +11471,7 @@ class OGInfinity {
   }
 
   async getEmpireInfo() {
-    const empire = await this.EmpirePage.GetEmpireAsync();
+    const empire = await EmpirePage.GetEmpireAsync();
     Translator.UpdateAllTechNamesFromEmpire(empire.translations);
 
     return empire.planets;

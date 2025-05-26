@@ -156,4 +156,4 @@ class EmpirePage {
   }
 }
 
-export default EmpirePage;
+export default new EmpirePage();
